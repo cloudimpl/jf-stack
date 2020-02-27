@@ -53,7 +53,7 @@ public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngin
 
     @Override
     public void onClientData(TcpEngine.ServerSocket socket, TcpEngine.ClientSocket client, byte[] data, int len) {
-        System.err.println("data received : " + new String(data));
+        System.err.println("data received : " + new String(data,0,len));
         client.write("pong".getBytes(), "pong".getBytes().length);
     }
 
