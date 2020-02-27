@@ -6,27 +6,57 @@
 package com.cloudimpl.net.example;
 
 import com.cloudimpl.net.TcpEngine;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  *
  * @author nuwansa
  */
-public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngine.ClientSocket.ClientListener {
+public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngine.ClientSocket.ClientListener, Runnable {
+
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private ScheduledFuture<?> hnd;
+    private TcpEngine.ClientSocket client;
+
+    @Override
+    public void run() {
+        client.write("ping".getBytes(), "ping".getBytes().length);
+    }
 
     @Override
     public void onConnect(TcpEngine.ClientSocket client) {
         System.out.println("client connected . " + client.getSocket());
-        client.write("ping".getBytes(), "ping".getBytes().length);
+        if (hnd != null) {
+            hnd.cancel(true);
+        }
+        this.client = client;
+        hnd = scheduler.scheduleAtFixedRate(this, 1, 1, SECONDS);
+
+    }
+
+    @Override
+    public void onDisconnect(TcpEngine.ClientSocket client) {
+        System.out.println("client disconnected . " + client.getSocket());
+        if (hnd != null) {
+            hnd.cancel(true);
+            hnd = null;
+        }
+        this.client = null;
     }
 
     @Override
     public void onClientData(TcpEngine.ServerSocket socket, TcpEngine.ClientSocket client, byte[] data, int len) {
         System.err.println("data received : " + new String(data));
+        client.write("pong".getBytes(), "pong".getBytes().length);
     }
 
     @Override
     public void onData(TcpEngine.ClientSocket client, byte[] data, int len) {
         client.write(data, len);
+        System.err.println("data received : " + new String(data));
     }
 
     public static int offset = 0;
@@ -59,4 +89,5 @@ public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngin
     private static String getArg(int index) {
         return args[offset + index];
     }
+
 }
