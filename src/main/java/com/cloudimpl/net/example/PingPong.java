@@ -34,7 +34,8 @@ public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngin
 
     public static void main(String[] args) {
         PingPong.args = args;
-        TcpEngine engine = new TcpEngine(args);
+        String[] args2 = new String[0];
+        TcpEngine engine = new TcpEngine(args2);
         PingPong pingPong = new PingPong();
         int i = 0;
         while (i < args.length) {
