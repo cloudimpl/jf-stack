@@ -29,6 +29,7 @@ public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngin
         {
             String ping = "ping"+(counter++);
             client.write(ping.getBytes(), ping.getBytes().length);
+            System.out.println(ping +" sent.");
         }
     }
    
