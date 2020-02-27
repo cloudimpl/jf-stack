@@ -17,7 +17,7 @@ public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngin
     private Timer timer;
     private TcpEngine.ClientSocket client;
     private final TcpEngine engine;
-
+    private int counter = 0;
     public PingPong(TcpEngine engine) {
         
         this.engine = engine;
@@ -26,7 +26,10 @@ public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngin
      @Override
     public void OnTimer(Timer timer) {
         if(this.timer == timer)
-            client.write("ping".getBytes(), "ping".getBytes().length);
+        {
+            String ping = "ping"+(counter++);
+            client.write(ping.getBytes(), ping.getBytes().length);
+        }
     }
    
 
