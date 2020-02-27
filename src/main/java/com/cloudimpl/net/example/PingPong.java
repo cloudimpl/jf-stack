@@ -6,43 +6,47 @@
 package com.cloudimpl.net.example;
 
 import com.cloudimpl.net.TcpEngine;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import com.cloudimpl.net.Timer;
 
 /**
  *
  * @author nuwansa
  */
-public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngine.ClientSocket.ClientListener, Runnable {
+public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngine.ClientSocket.ClientListener,Timer.Listener {
 
-    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    private ScheduledFuture<?> hnd;
+    private Timer timer;
     private TcpEngine.ClientSocket client;
+    private TcpEngine engine;
 
-    @Override
-    public void run() {
-        client.write("ping".getBytes(), "ping".getBytes().length);
+    public PingPong(TcpEngine engine) {
+        
+        this.engine = engine;
     }
+    
+     @Override
+    public void OnTimer(Timer timer) {
+        if(this.timer == timer)
+            client.write("ping".getBytes(), "ping".getBytes().length);
+    }
+   
 
     @Override
     public void onConnect(TcpEngine.ClientSocket client) {
         System.out.println("client connected . " + client.getSocket());
-        if (hnd != null) {
-            hnd.cancel(true);
+        if (timer != null) {
+            timer.cancel();
         }
         this.client = client;
-        hnd = scheduler.scheduleAtFixedRate(this, 1, 1, SECONDS);
+        timer = engine.createTimer(1000000000, this);
 
     }
 
     @Override
     public void onDisconnect(TcpEngine.ClientSocket client) {
         System.out.println("client disconnected . " + client.getSocket());
-        if (hnd != null) {
-            hnd.cancel(true);
-            hnd = null;
+        if (timer != null) {
+            timer.cancel();
+            timer = null;
         }
         this.client = null;
     }
@@ -66,7 +70,7 @@ public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngin
         PingPong.args = args;
         String[] args2 = new String[0];
         TcpEngine engine = new TcpEngine(args2);
-        PingPong pingPong = new PingPong();
+        PingPong pingPong = new PingPong(engine);
         int i = 0;
         while (i < args.length) {
             i++;
@@ -89,5 +93,7 @@ public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngin
     private static String getArg(int index) {
         return args[offset + index];
     }
+
+   
 
 }

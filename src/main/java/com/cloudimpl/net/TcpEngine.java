@@ -2,6 +2,7 @@ package com.cloudimpl.net;
 
 import com.cloudimpl.fstack.Flag;
 import com.cloudimpl.fstack.utcp;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,9 +27,16 @@ public class TcpEngine implements Runnable {
     private final int handlerId;
     private final Map<Integer, Socket> mapSocks = new HashMap<>();
     private final byte[] recvBuffer = new byte[1024 * 1024];
+    private final ArrayList<Timer> timers = new ArrayList<>();
 
     public TcpEngine(String args[]) {
         handlerId = utcp.jff_init(args);
+    }
+
+    public Timer createTimer(long interval, Timer.Listener listener) {
+        Timer t = new Timer(listener, System.nanoTime() + interval, interval);
+        timers.add(t);
+        return t;
     }
 
     public ServerSocket createServer(int port, ServerSocket.ServerListener listener) {
@@ -68,7 +76,7 @@ public class TcpEngine implements Runnable {
     @Override
     public void run() {
         int events = utcp.jff_kevent(handlerId);
-  //      if(events > 0)
+        //      if(events > 0)
 //            System.out.println("event received . "+events);
         int i = 0;
         while (i < events) {
@@ -86,42 +94,50 @@ public class TcpEngine implements Runnable {
             }
             i++;
         }
+        handlerTimers();
+    }
+
+    private void handlerTimers() {
+        long time = System.nanoTime();
+        boolean isCancel = false;
+        for (int i = 0; i < timers.size(); i++) {
+            timers.get(i).run(time);
+            isCancel |= timers.get(i).isCancel();
+        }
+
     }
 
     private void onClientEvent(int index, ClientSocket socket) {
-        try{
-        if ((utcp.jff_evt_flags(handlerId, index) & Flag.EV_EOF()) > 0) {
-            onCloseEvent(socket);
-        } else if (utcp.jff_evt_filter(handlerId, index) == Flag.EVFILT_READ()) {
-            onReadEvent(socket);
-        } else if (utcp.jff_evt_filter(handlerId, index) == Flag.EVFILT_WRITE()) {
-            if (socket.getStatus() == SockStatus.PENDING) {
-                socket.setStatus(SockStatus.CONNECTED);
-                utcp.jff_set(handlerId, socket.getSocket(), Flag.EVFILT_WRITE(), Flag.EV_DELETE());
-                utcp.jff_set(handlerId, socket.getSocket(), Flag.EVFILT_READ(), Flag.EV_ADD());
-                socket.getListener().onConnect(socket);
+        try {
+            if ((utcp.jff_evt_flags(handlerId, index) & Flag.EV_EOF()) > 0) {
+                onCloseEvent(socket);
+            } else if (utcp.jff_evt_filter(handlerId, index) == Flag.EVFILT_READ()) {
+                onReadEvent(socket);
+            } else if (utcp.jff_evt_filter(handlerId, index) == Flag.EVFILT_WRITE()) {
+                if (socket.getStatus() == SockStatus.PENDING) {
+                    socket.setStatus(SockStatus.CONNECTED);
+                    utcp.jff_set(handlerId, socket.getSocket(), Flag.EVFILT_WRITE(), Flag.EV_DELETE());
+                    utcp.jff_set(handlerId, socket.getSocket(), Flag.EVFILT_READ(), Flag.EV_ADD());
+                    socket.getListener().onConnect(socket);
+                }
             }
-        }
-        }catch(Exception ex)
-        {
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
 
     private void onServerEvent(int index, ServerSocket server) {
-        try{
-        if (utcp.jff_evt_filter(handlerId, index) == Flag.EVFILT_READ()) {
-            int nclientfd = utcp.jff_accept(server.getSocket());
-            ClientSocket client = new ClientSocket(nclientfd, server, SockStatus.CONNECTED, null);
-            utcp.jff_set(handlerId, client.getSocket(), Flag.EVFILT_READ(), Flag.EV_ADD());
-            mapSocks.put(client.getSocket(), client);
-            server.getListener().onClientConnect(server, client);
-        }
-        else {
-            System.out.println("unknown server event . "+utcp.jff_evt_filter(handlerId, index));
-        }
-        }catch(Exception ex)
-        {
+        try {
+            if (utcp.jff_evt_filter(handlerId, index) == Flag.EVFILT_READ()) {
+                int nclientfd = utcp.jff_accept(server.getSocket());
+                ClientSocket client = new ClientSocket(nclientfd, server, SockStatus.CONNECTED, null);
+                utcp.jff_set(handlerId, client.getSocket(), Flag.EVFILT_READ(), Flag.EV_ADD());
+                mapSocks.put(client.getSocket(), client);
+                server.getListener().onClientConnect(server, client);
+            } else {
+                System.out.println("unknown server event . " + utcp.jff_evt_filter(handlerId, index));
+            }
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
@@ -182,13 +198,13 @@ public class TcpEngine implements Runnable {
             this.listener = listener;
         }
 
-        public int write(byte[] data,int len)
-        {
-            if(status != SockStatus.CONNECTED)
-                throw new RuntimeException("socket not connected : status : "+status);
+        public int write(byte[] data, int len) {
+            if (status != SockStatus.CONNECTED) {
+                throw new RuntimeException("socket not connected : status : " + status);
+            }
             return utcp.jff_write(getSocket(), data, len);
         }
-        
+
         private SockStatus getStatus() {
             return status;
         }
@@ -207,12 +223,12 @@ public class TcpEngine implements Runnable {
 
         public static interface ClientListener {
 
-            default void onConnect(ClientSocket client){
-                System.out.println("client connected . "+client.getSocket());
+            default void onConnect(ClientSocket client) {
+                System.out.println("client connected . " + client.getSocket());
             }
 
-            default void onDisconnect(ClientSocket client){
-                System.out.println("client disconnected . "+client.getSocket());
+            default void onDisconnect(ClientSocket client) {
+                System.out.println("client disconnected . " + client.getSocket());
             }
 
             void onData(ClientSocket client, byte[] data, int len);
@@ -234,13 +250,15 @@ public class TcpEngine implements Runnable {
 
         public static interface ServerListener {
 
-            default void onClientConnect(ServerSocket server, ClientSocket client){
-                System.out.println("serverside client connected . "+client.getSocket());
+            default void onClientConnect(ServerSocket server, ClientSocket client) {
+                System.out.println("serverside client connected . " + client.getSocket());
             }
 
-            default void onClientDisconnect(ServerSocket server, ClientSocket client){
-                 System.out.println("serverside client disconnected . "+client.getSocket());
-            };
+            default void onClientDisconnect(ServerSocket server, ClientSocket client) {
+                System.out.println("serverside client disconnected . " + client.getSocket());
+            }
+
+            ;
 
             void onClientData(ServerSocket socket, ClientSocket client, byte[] data, int len);
         }
