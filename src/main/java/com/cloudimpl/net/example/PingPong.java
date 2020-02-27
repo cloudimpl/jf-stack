@@ -16,7 +16,7 @@ public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngin
 
     private Timer timer;
     private TcpEngine.ClientSocket client;
-    private TcpEngine engine;
+    private final TcpEngine engine;
 
     public PingPong(TcpEngine engine) {
         
@@ -59,7 +59,7 @@ public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngin
 
     @Override
     public void onData(TcpEngine.ClientSocket client, byte[] data, int len) {
-        client.write(data, len);
+        //client.write(data, len);
         System.err.println("data received : " + new String(data));
     }
 
