@@ -44,7 +44,7 @@ public class PingPong implements TcpEngine.ServerSocket.ServerListener, TcpEngin
                 break;
             }
         }
-
+//	offset += 2;
         if (getArg(0).equals("s")) {
             System.out.println("starting server");
             engine.createServer(Integer.valueOf(getArg(1)), pingPong);
