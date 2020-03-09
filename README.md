@@ -1,3 +1,4 @@
+![Java CI with Maven](https://github.com/cloudimpl/jf-stack/workflows/Java%20CI%20with%20Maven/badge.svg)
 # jf-stack
 dpdk asynchronous tcp engine based on f-stack
 
