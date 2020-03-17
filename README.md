@@ -11,7 +11,7 @@ gateway= gateway ip<br>
 
 example : <br>
 client :<br>
-      java -Djava.library.path=lib/. -cp target/f-stack-1.0.jar com.cloudimpl.net.example.PingPong -- c &gt; remoteip &lt; 12345 <br>
+      java -Djava.library.path=lib/. -cp target/f-stack-1.0.jar com.cloudimpl.net.example.PingPong -- c &lt; remoteip &gt; 12345 <br>
 
 server: <br>
       java -Djava.library.path=lib/. -cp target/f-stack-1.0.jar com.cloudimpl.net.example.PingPong -- s 12345
